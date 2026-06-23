@@ -1,0 +1,12 @@
+﻿# Entorno virtual
+.venv/
+
+# Excel con datos reales (NO sube al repositorio público)
+*.xlsx
+*.xls
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc

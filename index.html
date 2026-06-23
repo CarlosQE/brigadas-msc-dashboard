@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Dashboard · Brigadas MSC</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{--bg:#0d1117;--surf:#161b22;--surf2:#1c2330;--bdr:#30363d;--acc:#e85d04;--acc2:#f48c06;--txt:#e6edf3;--mut:#8b949e;--grn:#2ea043;--red:#cf222e;--ylw:#d29922;--blu:#388bfd;--r:8px;--f:'Inter',sans-serif;--m:'JetBrains Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--f);min-height:100vh}
+/* UPLOAD */
+#up{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:24px}
+.up-logo{display:flex;align-items:center;gap:14px}
+.up-badge{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 20px rgba(232,93,4,.3)}
+.up-logo h1{font-size:22px;font-weight:700;letter-spacing:-.3px}
+.up-logo p{font-size:13px;color:var(--mut);margin-top:2px}
+.dz{width:100%;max-width:460px;border:2px dashed var(--bdr);border-radius:16px;padding:52px 32px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surf)}
+.dz:hover,.dz.over{border-color:var(--acc);background:rgba(232,93,4,.06)}
+.dz-icon{font-size:38px;margin-bottom:14px}
+.dz h2{font-size:15px;font-weight:600;margin-bottom:6px}
+.dz p{font-size:12px;color:var(--mut)}
+.dz input{display:none}
+.up-hint{font-size:11px;color:var(--mut);text-align:center}
+.up-hint b{color:var(--acc)}
+/* LOADING */
+#ld{position:fixed;inset:0;background:rgba(13,17,23,.88);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:14px}
+.spin{width:38px;height:38px;border:3px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;z-index:9998;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:11px 16px;font-size:13px;box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateY(60px);opacity:0;transition:all .3s;pointer-events:none}
+#toast.show{transform:translateY(0);opacity:1}
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:100;background:var(--surf);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 20px;height:54px;gap:12px}
+.tb-dot{width:9px;height:9px;border-radius:50%;background:var(--acc);flex-shrink:0}
+.tb-title{font-size:13px;font-weight:700;flex-shrink:0}
+.tb-file{font-size:11px;color:var(--mut);font-family:var(--m);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+/* TIME FILTER BAR */
+.tbar{display:flex;align-items:center;gap:8px;background:var(--surf2);border-bottom:1px solid var(--bdr);padding:8px 20px;flex-wrap:wrap}
+.tbar-label{font-size:11px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+.tpill{padding:5px 12px;border:1px solid var(--bdr);border-radius:20px;font-size:12px;font-weight:500;background:transparent;color:var(--mut);cursor:pointer;transition:all .15s;font-family:var(--f)}
+.tpill:hover{color:var(--txt);border-color:var(--mut)}
+.tpill.active{background:var(--acc);color:white;border-color:var(--acc)}
+.tbar-sep{width:1px;height:20px;background:var(--bdr);margin:0 4px}
+.tbar-custom{display:flex;align-items:center;gap:6px}
+.tdate{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:5px 8px;color:var(--txt);font-size:12px;font-family:var(--m);outline:none}
+.tdate:focus{border-color:var(--acc)}
+.tbar-range{font-size:11px;color:var(--acc);font-family:var(--m);margin-left:auto}
+/* LAYOUT */
+#app{display:none;min-height:100vh}
+.body{display:flex;min-height:calc(100vh - 94px)}
+.sidebar{width:196px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--bdr);padding:14px 10px;display:flex;flex-direction:column;gap:3px}
+.nb{width:100%;display:flex;align-items:center;gap:9px;padding:9px 11px;border:none;background:transparent;color:var(--mut);font-size:13px;font-weight:500;border-radius:6px;cursor:pointer;transition:all .15s;text-align:left;font-family:var(--f)}
+.nb:hover{color:var(--txt);background:var(--surf2)}
+.nb.active{color:var(--txt);background:var(--surf2);border-left:3px solid var(--acc);padding-left:8px}
+.nb-icon{font-size:14px;flex-shrink:0}
+.nsec{font-size:10px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.8px;padding:6px 11px 2px}
+.ndiv{height:1px;background:var(--bdr);margin:6px 2px}
+.content{flex:1;padding:18px;overflow-y:auto;min-width:0}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:none;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:var(--f)}
+.btn-ghost{background:transparent;color:var(--mut);border:1px solid var(--bdr)}
+.btn-ghost:hover{color:var(--txt);border-color:var(--mut)}
+.btn-primary{background:var(--acc);color:white}
+.btn-primary:hover{background:var(--acc2)}
+/* PANELS */
+.panel{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+.ph{padding:11px 15px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.pt{font-size:12px;font-weight:600;display:flex;align-items:center;gap:7px}
+.pb{padding:14px}
+/* KPI */
+.kg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:13px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--acc)}
+.kpi.g::before{background:var(--grn)}.kpi.b::before{background:var(--blu)}.kpi.y::before{background:var(--ylw)}.kpi.r::before{background:var(--red)}
+.kl{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.kv{font-size:24px;font-weight:700;font-family:var(--m);line-height:1}
+.ks{font-size:10px;color:var(--mut);margin-top:3px}
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.gf{grid-column:1/-1}
+.cw{position:relative;height:230px}.cw canvas{max-height:230px}
+.cw-sm{height:180px}.cw-sm canvas{max-height:180px}
+@media(max-width:900px){.g2,.g3{grid-template-columns:1fr}}
+/* SEARCH */
+.srow{display:flex;gap:8px;margin-bottom:14px}
+.sinput{flex:1;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:9px 13px;color:var(--txt);font-size:13px;font-family:var(--m);outline:none;transition:border-color .15s}
+.sinput:focus{border-color:var(--acc)}
+.sinput::placeholder{color:var(--mut)}
+/* PERSON */
+.p-hdr{display:flex;align-items:flex-start;justify-content:space-between;padding:16px;border-bottom:1px solid var(--bdr)}
+.p-name{font-size:16px;font-weight:700;margin-bottom:4px}
+.p-meta{display:flex;flex-wrap:wrap;gap:9px;margin-top:6px}
+.pm{font-size:11px;color:var(--mut);display:flex;align-items:center;gap:4px}
+.pstats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px;border-bottom:1px solid var(--bdr)}
+.ps{text-align:center;padding:11px;background:var(--surf2);border-radius:6px}
+.psv{font-size:19px;font-weight:700;font-family:var(--m);color:var(--acc)}
+.psl{font-size:10px;color:var(--mut);margin-top:2px}
+/* BADGE */
+.badge{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;font-family:var(--m)}
+.bm{background:rgba(56,139,253,.15);color:var(--blu);border:1px solid rgba(56,139,253,.3)}
+.bb{background:rgba(46,160,67,.15);color:var(--grn);border:1px solid rgba(46,160,67,.3)}
+.bs{background:rgba(210,153,34,.15);color:var(--ylw);border:1px solid rgba(210,153,34,.3)}
+/* MODULE LIST */
+.ml{display:flex;flex-direction:column;gap:5px;padding:12px}
+.mr{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px}
+.mt{font-size:10px;font-family:var(--m);color:var(--mut);min-width:24px}
+.mn{font-size:12px;flex:1}
+.mb-w{flex:0 0 80px;height:3px;background:var(--bdr);border-radius:2px}
+.mb{height:100%;border-radius:2px;transition:width .4s}
+.mh{font-size:10px;font-family:var(--m);color:var(--acc2);min-width:50px;text-align:right}
+.mno{font-size:10px;font-family:var(--m);min-width:36px;text-align:right}
+.ms{font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:54px;text-align:center;flex-shrink:0}
+.sok{background:rgba(46,160,67,.15);color:var(--grn);border:1px solid rgba(46,160,67,.25)}
+.swip{background:rgba(210,153,34,.15);color:var(--ylw);border:1px solid rgba(210,153,34,.25)}
+.sno{background:rgba(139,148,158,.08);color:var(--mut);border:1px solid var(--bdr)}
+/* FILTERS */
+.frow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.fl{font-size:11px;color:var(--mut)}
+.fsel{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:7px 10px;color:var(--txt);font-size:12px;font-family:var(--f);outline:none;cursor:pointer}
+.fsel:focus{border-color:var(--acc)}
+/* TABLE */
+.dt{width:100%;border-collapse:collapse;font-size:12px}
+.dt th{text-align:left;padding:7px 10px;font-size:10px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bdr);background:var(--surf2)}
+.dt td{padding:8px 10px;border-bottom:1px solid rgba(48,54,61,.4)}
+.dt tr:hover td{background:var(--surf2)}
+.mono{font-family:var(--m);font-size:11px}
+/* RANK CARDS */
+.rcs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.rc{background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:13px}
+.rcl{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);margin-bottom:5px}
+.rcn{font-size:13px;font-weight:600;margin-bottom:1px}
+.rcs2{font-size:11px;color:var(--mut)}
+.rcv{font-size:21px;font-weight:700;font-family:var(--m);color:var(--acc)}
+.rc.top .rcl{color:var(--grn)}.rc.bot .rcl{color:var(--red)}
+/* SECTION HEADER */
+.shdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.stitle{font-size:14px;font-weight:700}
+.ssub{font-size:12px;color:var(--mut);margin-top:1px}
+/* TREND CHART */
+.trend-panel{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+/* EMPTY */
+.empty{text-align:center;padding:48px 20px;color:var(--mut)}
+.empty .ei{font-size:34px;margin-bottom:10px}
+/* SEARCH LIST */
+.srl{display:flex;flex-direction:column;gap:1px;padding:6px}
+.sri{display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;border-radius:6px;transition:background .15s}
+.sri:hover{background:var(--surf2)}
+.sri-ci{font-family:var(--m);font-size:11px;color:var(--mut);min-width:80px}
+.sri-name{flex:1;font-size:12px}
+/* ASIS BAR */
+.abw{height:4px;background:var(--bdr);border-radius:2px;margin-top:3px}
+.ab{height:100%;border-radius:2px}
+/* VERIFY PANEL */
+.verify{background:rgba(46,160,67,.06);border:1px solid rgba(46,160,67,.2);border-radius:var(--r);padding:14px;margin-bottom:14px;font-size:12px}
+.verify h3{color:var(--grn);font-size:12px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.vrow{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(46,160,67,.1)}
+.vrow:last-child{border:none}
+.vk{color:var(--mut)}.vv{font-family:var(--m);color:var(--txt)}
+.vmatch{color:var(--grn)}.vwrong{color:var(--red)}
+</style>
+</head>
+<body>
+<!-- UPLOAD -->
+<div id="up">
+  <div class="up-logo">
+    <div class="up-badge">🔥</div>
+    <div><h1>Brigadas MSC · Dashboard</h1><p>Sistema de Seguimiento del Programa de Capacitación</p></div>
+  </div>
+  <div class="dz" id="dz">
+    <div class="dz-icon">📊</div>
+    <h2>Cargar planilla de capacitación</h2>
+    <p>Arrastrá el archivo aquí o hacé clic para seleccionarlo</p>
+    <input type="file" id="fi" accept=".xlsx,.xls"/>
+  </div>
+  <p class="up-hint">Solo archivos <b>.xlsx</b> · Procesamiento 100% local, ningún dato sale de tu computadora</p>
+</div>
+<!-- LOADING -->
+<div id="ld"><div class="spin"></div><span style="font-size:12px;color:var(--mut)">Procesando planilla…</span></div>
+<!-- TOAST -->
+<div id="toast"></div>
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="tb-dot"></div>
+    <span class="tb-title">Brigadas MSC</span>
+    <span class="tb-file" id="tbf"></span>
+    <button class="btn btn-primary" style="margin-left:auto;flex-shrink:0" onclick="exportPDF()">⬇ PDF</button>
+    <button class="btn btn-ghost" style="flex-shrink:0" onclick="resetApp()">↩ Cambiar</button>
+  </div>
+  <!-- TIME FILTER BAR -->
+  <div class="tbar">
+    <span class="tbar-label">Período:</span>
+    <button class="tpill active" onclick="setTPill(this,'all')">Todo</button>
+    <button class="tpill" onclick="setTPill(this,'y2024')">2024</button>
+    <button class="tpill" onclick="setTPill(this,'y2025')">2025</button>
+    <button class="tpill" onclick="setTPill(this,'y2026')">2026</button>
+    <div class="tbar-sep"></div>
+    <button class="tpill" onclick="setTPill(this,'last30')">Último mes</button>
+    <button class="tpill" onclick="setTPill(this,'last60')">Bimestre</button>
+    <button class="tpill" onclick="setTPill(this,'last90')">Trimestre</button>
+    <button class="tpill" onclick="setTPill(this,'last180')">Semestre</button>
+    <div class="tbar-sep"></div>
+    <div class="tbar-custom">
+      <span class="fl">De:</span>
+      <input type="date" class="tdate" id="t-from" onchange="setCustomRange()"/>
+      <span class="fl">A:</span>
+      <input type="date" class="tdate" id="t-to" onchange="setCustomRange()"/>
+    </div>
+    <span class="tbar-range" id="tbar-range"></span>
+  </div>
+  <div class="body">
+    <nav class="sidebar">
+      <span class="nsec">Vistas</span>
+      <button class="nb active" onclick="goTab('individual')" id="nb-individual"><span class="nb-icon">👤</span>Brigadista</button>
+      <button class="nb" onclick="goTab('grupo')" id="nb-grupo"><span class="nb-icon">👥</span>Grupos</button>
+      <div class="ndiv"></div>
+      <span class="nsec">Programa</span>
+      <button class="nb" onclick="goTab('programa')" id="nb-programa"><span class="nb-icon">📋</span>Por Área</button>
+      <button class="nb" onclick="goTab('nivel')" id="nb-nivel"><span class="nb-icon">🎯</span>Nv. Inicial</button>
+      <div class="ndiv"></div>
+      <span class="nsec">Análisis</span>
+      <button class="nb" onclick="goTab('tendencia')" id="nb-tendencia"><span class="nb-icon">📈</span>Tendencia</button>
+      <div class="ndiv"></div>
+      <button class="nb" onclick="goTab('verificar')" id="nb-verificar"><span class="nb-icon">✅</span>Verificar datos</button>
+    </nav>
+    <div class="content" id="mc">
+      <div id="tab-individual"></div>
+      <div id="tab-grupo" style="display:none"></div>
+      <div id="tab-programa" style="display:none"></div>
+      <div id="tab-nivel" style="display:none"></div>
+      <div id="tab-tendencia" style="display:none"></div>
+      <div id="tab-verificar" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+let RAW = [];          // all rows from BD_seg
+let PERSONAL = {};     // ci -> profile from BD_personal
+let MOD_TOTAL = {};    // modulo -> total lecciones in full program
+let CHARTS = {};
+let TIME_FILTER = { mode:'all', from:null, to:null };
+let ACTIVE_TAB = 'individual';
+
+const MOD_NAMES = {'MODULO 01':'Inducción Voluntario','MODULO 02':'Sistema Cmd. Incidente','MODULO 03':'Soporte Vital Básico','MODULO 04':'RCP y DEA','MODULO 05':'Prev. y Control Fuego','MODULO 06':'Fuego','MODULO 07':'Rescate','MODULO 08':'Mat. Peligrosos','MODULO 09':'Emergencias Naturales','MODULO 10':'Módulo 10','MODULO 11':'Módulo 11','MODULO 12':'Módulo 12','MODULO 13':'Módulo 13'};
+
+// GROUND TRUTH for verification (computed from Python audit)
+const GROUND_TRUTH = {
+  total_rows: 1916,
+  rows_with_hrs: 1886,
+  rows_sin_hrs: 30,
+  cis_unicos: 128,
+  total_hrs: 3863.5,
+  top_person: { ci:'4151385', nombre:'Melian Mamani Llanque', hrs:91.0, sesiones:42, asis:42 },
+  por_año: { 2024:{registros:720,hrs:1561.5,brigadistas:78}, 2025:{registros:797,hrs:1570.0,brigadistas:87}, 2026:{registros:399,hrs:732.0,brigadistas:83} }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FILE HANDLING
+// ═══════════════════════════════════════════════════════════════════════════════
+const dz = document.getElementById('dz');
+dz.addEventListener('click', () => document.getElementById('fi').click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
+document.getElementById('fi').addEventListener('change', e => { if(e.target.files[0]) processFile(e.target.files[0]); });
+
+function processFile(file) {
+  if (!file.name.match(/\.xlsx?$/i)) { toast('⚠ Solo archivos .xlsx'); return; }
+  showLd(true);
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
+      const hasPersonal = !!wb.Sheets['BD_personal'];
+      const hasSeg = !!wb.Sheets['BD_seg'];
+      if (!hasPersonal || !hasSeg) { showLd(false); toast('⚠ No se encontraron las hojas BD_personal y BD_seg'); return; }
+      parsePersonal(wb); parseSeg(wb);
+      document.getElementById('tbf').textContent = file.name;
+      document.getElementById('up').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      showLd(false);
+      setTimeRange();
+      renderTab('individual');
+      toast(`✓ ${RAW.length} registros · ${Object.keys(PERSONAL).length} brigadistas cargados`);
+    } catch(err) { showLd(false); toast('⚠ ' + err.message); console.error(err); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PARSERS
+// ═══════════════════════════════════════════════════════════════════════════════
+function parsePersonal(wb) {
+  PERSONAL = {};
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets['BD_personal'], { header:1, defval:null });
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i]; const ci = s(r[1]); if(!ci) continue;
+    PERSONAL[ci] = { nombre:s(r[2]), estado:s(r[3]), tipo_bv:s(r[6]), nivel:s(r[8]), area:s(r[9]), grupo:s(r[11]), supervisor:s(r[17]) };
+  }
+}
+
+function parseSeg(wb) {
+  RAW = []; MOD_TOTAL = {};
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets['BD_seg'], { header:1, defval:null, raw:false });
+  const modLec = {};
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i]; if (r[0] === null || r[0] === undefined) continue;
+    const ci  = s(r[1]); const mod = s(r[4]); const cod = s(r[16]);
+    if (mod && cod) { if(!modLec[mod]) modLec[mod]=new Set(); modLec[mod].add(cod); }
+    const hrs_raw = r[11]; const nota_raw = r[9];
+    let hrs = 0; try { hrs = parseFloat(String(hrs_raw||'0').replace(',','.')) || 0; } catch{}
+    let nota = null; try { if(nota_raw !== null && s(nota_raw)) nota = parseFloat(nota_raw); } catch{}
+    let fecha = null;
+    const fraw = r[12];
+    if (fraw instanceof Date) fecha = fraw;
+    else if (fraw) { try { const d = new Date(String(fraw).trim()); if(!isNaN(d)) fecha = d; } catch{} }
+
+    RAW.push({ ci, nombre:s(r[2]), servicio:s(r[3]), modulo:mod, unidad:s(r[6]), leccion:s(r[8]),
+               nota, hrs, fecha, tipo:s(r[17]), area:s(r[18]), asistio: hrs > 0, cod });
+  }
+  for (const [m,st] of Object.entries(modLec)) MOD_TOTAL[m] = st.size;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TIME FILTER
+// ═══════════════════════════════════════════════════════════════════════════════
+function setTPill(btn, mode) {
+  document.querySelectorAll('.tpill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('t-from').value = '';
+  document.getElementById('t-to').value = '';
+  TIME_FILTER = buildFilter(mode);
+  setTimeRange();
+  renderCurrentTab();
+}
+
+function setCustomRange() {
+  const f = document.getElementById('t-from').value;
+  const t = document.getElementById('t-to').value;
+  if (!f && !t) return;
+  document.querySelectorAll('.tpill').forEach(b => b.classList.remove('active'));
+  TIME_FILTER = { mode:'custom', from: f ? new Date(f) : null, to: t ? new Date(t+'T23:59:59') : null };
+  setTimeRange();
+  renderCurrentTab();
+}
+
+function buildFilter(mode) {
+  const now = new Date();
+  const msDay = 86400000;
+  if (mode === 'all') return { mode, from:null, to:null };
+  if (mode === 'y2024') return { mode, from:new Date('2024-01-01'), to:new Date('2024-12-31T23:59:59') };
+  if (mode === 'y2025') return { mode, from:new Date('2025-01-01'), to:new Date('2025-12-31T23:59:59') };
+  if (mode === 'y2026') return { mode, from:new Date('2026-01-01'), to:new Date('2026-12-31T23:59:59') };
+  if (mode === 'last30') return { mode, from:new Date(now - 30*msDay), to:now };
+  if (mode === 'last60') return { mode, from:new Date(now - 60*msDay), to:now };
+  if (mode === 'last90') return { mode, from:new Date(now - 90*msDay), to:now };
+  if (mode === 'last180') return { mode, from:new Date(now - 180*msDay), to:now };
+  return { mode, from:null, to:null };
+}
+
+function setTimeRange() {
+  const f = TIME_FILTER;
+  if (!f.from && !f.to) { document.getElementById('tbar-range').textContent = `Todos los datos (${RAW.length} registros)`; return; }
+  const filtered = applyTimeFilter(RAW);
+  const fStr = f.from ? f.from.toLocaleDateString('es-BO') : '—';
+  const tStr = f.to ? f.to.toLocaleDateString('es-BO') : '—';
+  document.getElementById('tbar-range').textContent = `${fStr} → ${tStr} · ${filtered.length} registros`;
+}
+
+function applyTimeFilter(data) {
+  const { from, to } = TIME_FILTER;
+  if (!from && !to) return data;
+  return data.filter(d => {
+    if (!d.fecha) return false;
+    if (from && d.fecha < from) return false;
+    if (to && d.fecha > to) return false;
+    return true;
+  });
+}
+
+function filteredData() { return applyTimeFilter(RAW); }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AGGREGATION
+// ═══════════════════════════════════════════════════════════════════════════════
+function aggregate(rows) {
+  // Returns { ci -> { sesiones, asistidas, hrs, notas[], modulos:{}, tipo, area } }
+  const result = {};
+  for (const d of rows) {
+    if (!d.ci) continue;
+    if (!result[d.ci]) result[d.ci] = { sesiones:0, asistidas:0, hrs:0, notas:[], modulos:{}, tipo:d.tipo, area:d.area };
+    const a = result[d.ci];
+    a.sesiones++;
+    if (d.asistio) { a.asistidas++; a.hrs += d.hrs; }
+    if (d.nota !== null) a.notas.push(d.nota);
+    if (d.modulo) {
+      if (!a.modulos[d.modulo]) a.modulos[d.modulo] = { lec_ok:0, hrs:0, notas:[] };
+      if (d.asistio) { a.modulos[d.modulo].lec_ok++; a.modulos[d.modulo].hrs += d.hrs; }
+      if (d.nota !== null) a.modulos[d.modulo].notas.push(d.nota);
+    }
+  }
+  return result;
+}
+
+function getPersonAgg(ci) {
+  const agg = aggregate(filteredData().filter(d => d.ci === ci));
+  return agg[ci] || { sesiones:0, asistidas:0, hrs:0, notas:[], modulos:{}, tipo:'', area:'' };
+}
+
+function getAllAgg() { return aggregate(filteredData()); }
+
+function mergeProfile(ci, agg) {
+  const p = PERSONAL[ci] || {};
+  const a = agg[ci] || { sesiones:0, asistidas:0, hrs:0, notas:[], modulos:{}, tipo:'', area:'' };
+  return { ci, ...p, ...a, tipo_bv: p.tipo_bv || a.tipo, area: p.area || a.area };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NAVIGATION & RENDER
+// ═══════════════════════════════════════════════════════════════════════════════
+function goTab(t) {
+  ACTIVE_TAB = t;
+  ['individual','grupo','programa','nivel','tendencia','verificar'].forEach(id => {
+    document.getElementById('tab-'+id).style.display = id===t?'block':'none';
+    document.getElementById('nb-'+id)?.classList.toggle('active', id===t);
+  });
+  renderTab(t);
+}
+
+function renderCurrentTab() { renderTab(ACTIVE_TAB); }
+
+function renderTab(t) {
+  destroyAll();
+  if (t==='individual') renderIndividual();
+  else if (t==='grupo') renderGrupoShell();
+  else if (t==='programa') renderPrograma();
+  else if (t==='nivel') renderNivel();
+  else if (t==='tendencia') renderTendencia();
+  else if (t==='verificar') renderVerificar();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAB: INDIVIDUAL
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderIndividual() {
+  document.getElementById('tab-individual').innerHTML = `
+    <div class="shdr"><div><div class="stitle">Consulta individual</div><div class="ssub">Buscá por CI o nombre</div></div></div>
+    <div class="srow">
+      <input type="text" class="sinput" id="sci" placeholder="Ingresá CI o nombre…" oninput="onSearch()"/>
+      <button class="btn btn-ghost" onclick="clearSearch()">✕</button>
+    </div>
+    <div id="sres"></div><div id="pdet"></div>`;
+}
+
+let searchT;
+function onSearch() {
+  clearTimeout(searchT);
+  searchT = setTimeout(() => {
+    const q = document.getElementById('sci')?.value.trim().toLowerCase();
+    if (!q) { el('sres').innerHTML=''; el('pdet').innerHTML=''; return; }
+    const results = Object.keys(PERSONAL).filter(ci => ci.toLowerCase().includes(q) || PERSONAL[ci].nombre.toLowerCase().includes(q));
+    if (!results.length) { el('sres').innerHTML=`<div class="empty"><div class="ei">🔍</div><p>Sin resultados para "${q}"</p></div>`; return; }
+    if (results.length===1) { showPerson(results[0]); el('sres').innerHTML=''; return; }
+    el('sres').innerHTML = `<div class="panel"><div class="ph"><span class="pt">Resultados (${results.length})</span></div><div class="srl">${
+      results.slice(0,12).map(ci => `<div class="sri" onclick="showPerson('${ci}');el('sres').innerHTML=''">
+        <span class="sri-ci">${ci}</span><span class="sri-name">${PERSONAL[ci].nombre}</span>
+        ${bdg(PERSONAL[ci].tipo_bv)}<span style="font-size:11px;color:var(--mut)">${PERSONAL[ci].area}</span></div>`).join('')
+    }</div></div>`;
+  }, 180);
+}
+
+function clearSearch() { if(el('sci')) el('sci').value=''; el('sres').innerHTML=''; el('pdet').innerHTML=''; }
+
+function showPerson(ci) {
+  if(el('sci')) el('sci').value = PERSONAL[ci]?.nombre || ci;
+  el('sres').innerHTML='';
+  const p = mergeProfile(ci, getAllAgg());
+  const agg = getPersonAgg(ci);
+  const ap = pct(agg.asistidas, agg.sesiones);
+  const na = avg(agg.notas);
+  const mods = Object.entries(agg.modulos).sort((a,b)=>a[0].localeCompare(b[0]));
+  const modsOk = mods.filter(([m,d])=>pct(d.lec_ok, MOD_TOTAL[m]||1)>=80).length;
+
+  el('pdet').innerHTML = `<div class="panel">
+    <div class="p-hdr">
+      <div><div class="p-name">${p.nombre||ci}</div>
+      <div class="p-meta">
+        <span class="pm">🪪 <b>${ci}</b></span>
+        <span class="pm">📍 ${p.area||'—'}</span>
+        <span class="pm">🏷 ${p.grupo||'—'}</span>
+        <span class="pm">👤 ${p.supervisor||'—'}</span>
+        <span class="pm">Estado: <b style="color:${p.estado==='Activo'?'var(--grn)':'var(--red)'}">${p.estado||'—'}</b></span>
+      </div></div>${bdg(p.tipo_bv||p.tipo)}
+    </div>
+    <div class="pstats">
+      <div class="ps"><div class="psv" style="color:${ac(ap)}">${ap}%</div><div class="psl">Asistencia</div></div>
+      <div class="ps"><div class="psv">${f1(agg.hrs)}</div><div class="psl">Horas</div></div>
+      <div class="ps"><div class="psv">${na?f1(na):'—'}</div><div class="psl">Nota prom.</div></div>
+      <div class="ps"><div class="psv">${modsOk}/${Object.keys(MOD_TOTAL).length}</div><div class="psl">Módulos ≥80%</div></div>
+    </div>
+    <div class="g2" style="padding:14px;gap:14px">
+      <div class="panel" style="margin:0"><div class="ph"><span class="pt">📈 Avance por módulo</span></div><div class="pb"><div class="cw"><canvas id="ch-pi-a"></canvas></div></div></div>
+      <div class="panel" style="margin:0"><div class="ph"><span class="pt">📝 Notas por módulo</span></div><div class="pb"><div class="cw"><canvas id="ch-pi-n"></canvas></div></div></div>
+    </div>
+    <div class="ph"><span class="pt">📚 Detalle por módulo</span><span style="font-size:10px;color:var(--mut)">Período activo: ${periodLabel()}</span></div>
+    <div class="ml">${mods.map(([m,d])=>{
+      const lt=MOD_TOTAL[m]||1; const lp=pct(d.lec_ok,lt); const na2=avg(d.notas);
+      return `<div class="mr">
+        <span class="mt">${m.replace('MODULO ','M')}</span>
+        <span class="mn">${MOD_NAMES[m]||m}</span>
+        <div class="mb-w"><div class="mb" style="width:${lp}%;background:${cp(lp)}"></div></div>
+        <span class="mh">${f1(d.hrs)} hr</span>
+        <span class="mno" style="color:${na2>=60?'var(--grn)':na2?'var(--red)':'var(--mut)'}">${na2?Math.round(na2):'—'}</span>
+        ${sbadge(d.lec_ok,lt)}</div>`;
+    }).join('') || '<div class="empty" style="padding:24px"><p>Sin actividad en el período seleccionado</p></div>'}</div>
+  </div>`;
+
+  if (mods.length) {
+    const labs = mods.map(([m])=>m.replace('MODULO ','M'));
+    const pcts = mods.map(([m,d])=>pct(d.lec_ok,MOD_TOTAL[m]||1));
+    const notas = mods.map(([_,d])=>avg(d.notas)?Math.round(avg(d.notas)):null);
+    mk('ch-pi-a','bar',labs,pcts,pcts.map(cp),{ymax:100,ypct:true});
+    mk('ch-pi-n','bar',labs,notas,['#388bfd'],{ymax:100,ymin:0});
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAB: GRUPOS
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderGrupoShell() {
+  const areas = [...new Set(Object.values(PERSONAL).map(p=>p.area).filter(Boolean))].sort();
+  document.getElementById('tab-grupo').innerHTML = `
+    <div class="shdr"><div><div class="stitle">Vista por grupo</div><div class="ssub">Período: ${periodLabel()}</div></div></div>
+    <div class="frow">
+      <span class="fl">Área:</span>
+      <select class="fsel" id="fa" onchange="onAreaChange()">
+        ${areas.map(a=>`<option value="${a}">${a}</option>`).join('')}
+      </select>
+      <span class="fl">Grupo:</span>
+      <select class="fsel" id="fg" onchange="renderGrupo()"></select>
+    </div>
+    <div id="gcontent"></div>`;
+  onAreaChange();
+}
+
+function onAreaChange() {
+  const area = el('fa')?.value;
+  const grupos = [...new Set(Object.values(PERSONAL).filter(p=>p.area===area).map(p=>p.grupo).filter(Boolean))].sort();
+  el('fg').innerHTML = grupos.map(g=>`<option value="${g}">${g}</option>`).join('');
+  renderGrupo();
+}
+
+function renderGrupo() {
+  const area = el('fa')?.value; const grupo = el('fg')?.value;
+  const cis = Object.keys(PERSONAL).filter(ci=>PERSONAL[ci].area===area&&PERSONAL[ci].grupo===grupo);
+  const agg = getAllAgg();
+  const profiles = cis.map(ci=>mergeProfile(ci,agg));
+  if (!profiles.length) { el('gcontent').innerHTML='<div class="empty"><div class="ei">📭</div><p>Sin brigadistas para este grupo</p></div>'; return; }
+
+  const sup = [...new Set(profiles.map(p=>p.supervisor).filter(Boolean))].join(', ')||'—';
+  const totS = profiles.reduce((s,p)=>s+p.sesiones,0);
+  const totA = profiles.reduce((s,p)=>s+p.asistidas,0);
+  const ap = pct(totA,totS);
+  const allN = profiles.flatMap(p=>p.notas);
+  const na = avg(allN);
+  const totH = profiles.reduce((s,p)=>s+p.hrs,0);
+  const sorted = [...profiles].filter(p=>p.sesiones>0).sort((a,b)=>pct(b.asistidas,b.sesiones)-pct(a.asistidas,a.sesiones));
+  const best=sorted[0]; const worst=sorted[sorted.length-1];
+  const modP = Object.keys(MOD_TOTAL).map(m=>[m, pct(profiles.filter(p=>p.modulos[m]&&p.modulos[m].lec_ok>0).length, profiles.length)]);
+
+  el('gcontent').innerHTML = `
+    <div class="panel"><div class="ph"><span class="pt">📍 ${area} · ${grupo}</span><span style="font-size:11px;color:var(--mut)">Supervisor: ${sup}</span></div>
+    <div class="pb">
+      <div class="kg">
+        <div class="kpi"><div class="kl">Brigadistas</div><div class="kv">${profiles.length}</div></div>
+        <div class="kpi g"><div class="kl">% Asistencia</div><div class="kv">${ap}%</div></div>
+        <div class="kpi b"><div class="kl">Nota promedio</div><div class="kv">${na?f1(na):'—'}</div></div>
+        <div class="kpi y"><div class="kl">Horas totales</div><div class="kv">${Math.round(totH)}</div></div>
+      </div>
+      <div class="rcs">
+        <div class="rc top"><div class="rcl">🏆 Mayor asistencia</div><div class="rcn">${best?.nombre||'—'}</div><div class="rcv">${best?pct(best.asistidas,best.sesiones)+'%':'—'}</div></div>
+        <div class="rc bot"><div class="rcl">⚠ Menor asistencia</div><div class="rcn">${worst?.nombre||'—'}</div><div class="rcv">${worst?pct(worst.asistidas,worst.sesiones)+'%':'—'}</div></div>
+      </div>
+    </div></div>
+    <div class="g2">
+      <div class="panel" style="margin:0"><div class="ph"><span class="pt">📈 Avance por módulo</span></div><div class="pb"><div class="cw"><canvas id="ch-gm"></canvas></div></div></div>
+      <div class="panel" style="margin:0"><div class="ph"><span class="pt">⏱ Horas por brigadista</span></div><div class="pb"><div class="cw"><canvas id="ch-gh"></canvas></div></div></div>
+    </div>
+    <div class="panel"><div class="ph"><span class="pt">👥 Detalle del grupo</span></div>
+    <div style="overflow-x:auto"><table class="dt"><thead><tr><th>Nombre</th><th>CI</th><th>Tipo</th><th>Asistencia</th><th>Horas</th><th>Nota</th><th>Módulos</th></tr></thead>
+    <tbody>${sorted.map(p=>{const ap2=pct(p.asistidas,p.sesiones);const na2=avg(p.notas);return`<tr>
+      <td style="cursor:pointer;color:var(--blu)" onclick="goTab('individual');setTimeout(()=>{el('sci').value='${p.ci}';onSearch()},50)">${p.nombre}</td>
+      <td class="mono">${p.ci}</td><td>${bdg(p.tipo_bv||p.tipo)}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><span class="mono" style="color:${ac(ap2)}">${ap2}%</span><div class="abw" style="width:55px"><div class="ab" style="width:${ap2}%;background:${ac(ap2)}"></div></div></div></td>
+      <td class="mono">${f1(p.hrs)}</td>
+      <td class="mono" style="color:${na2>=60?'var(--grn)':na2?'var(--red)':'var(--mut)'}">${na2?Math.round(na2):'—'}</td>
+      <td class="mono">${Object.keys(p.modulos).length} mód.</td></tr>`;}).join('')}
+    </tbody></table></div></div>`;
+
+  mk('ch-gm','bar',modP.map(([m])=>m.replace('MODULO ','M')),modP.map(([_,v])=>v),modP.map(([_,v])=>cp(v)),{ymax:100,ypct:true});
+  const sH=[...profiles].sort((a,b)=>b.hrs-a.hrs);
+  mk('ch-gh','bar',sH.map(p=>p.nombre.split(' ')[0]),sH.map(p=>p.hrs),['#e85d04'],{});
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAB: PROGRAMA POR ÁREA
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderPrograma() {
+  const agg = getAllAgg();
+  const areas = ['Mina','Planta','Servicios'];
+  let html = `<div class="shdr"><div><div class="stitle">Programa anual por área</div><div class="ssub">Período: ${periodLabel()}</div></div></div>`;
+
+  areas.forEach(area => {
+    const cis = Object.keys(PERSONAL).filter(ci=>PERSONAL[ci].area===area);
+    const profiles = cis.map(ci=>mergeProfile(ci,agg));
+    if (!profiles.length) return;
+    const grupos = [...new Set(profiles.map(p=>p.grupo).filter(Boolean))];
+    const totS=profiles.reduce((s,p)=>s+p.sesiones,0); const totA=profiles.reduce((s,p)=>s+p.asistidas,0);
+    const ap=pct(totA,totS); const bvm=profiles.filter(p=>(p.tipo_bv||p.tipo)==='BV-M');
+    const cid='ch-prog-'+area.toLowerCase();
+
+    html += `<div class="panel"><div class="ph" style="background:rgba(232,93,4,.06)">
+      <span class="pt" style="font-size:13px">📍 Área ${area}</span>
+      <span style="font-size:11px;color:var(--mut)">${profiles.length} brigadistas · ${bvm.length} BV-M · ${grupos.length} grupos</span>
+    </div><div class="pb">
+      <div class="kg" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi"><div class="kl">Total brigadistas</div><div class="kv">${profiles.length}</div></div>
+        <div class="kpi g"><div class="kl">% Asistencia área</div><div class="kv">${ap}%</div></div>
+        <div class="kpi b"><div class="kl">Grupos</div><div class="kv">${grupos.length}</div></div>
+      </div>
+      <div class="g2">
+        <div>
+          <table class="dt" style="margin-bottom:0"><thead><tr><th>Grupo</th><th>Brigad.</th><th>Asistencia</th></tr></thead>
+          <tbody>${grupos.map(g=>{const gm=profiles.filter(p=>p.grupo===g);const gs=gm.reduce((s,p)=>s+p.sesiones,0);const ga=gm.reduce((s,p)=>s+p.asistidas,0);const gp=pct(ga,gs);
+            return`<tr><td>${g}</td><td class="mono">${gm.length}</td><td class="mono" style="color:${ac(gp)}">${gp}%</td></tr>`;}).join('')}
+          </tbody></table>
+        </div>
+        <div class="panel" style="margin:0"><div class="ph"><span class="pt">📈 Módulos — BV-M (${bvm.length})</span></div><div class="pb"><div class="cw"><canvas id="${cid}"></canvas></div></div></div>
+      </div>
+    </div></div>`;
+
+    setTimeout(()=>{
+      if(!document.getElementById(cid)) return;
+      const mods=Object.keys(MOD_TOTAL);
+      const pcts=mods.map(m=>bvm.length?pct(bvm.filter(p=>p.modulos[m]&&p.modulos[m].lec_ok>0).length,bvm.length):0);
+      mk(cid,'bar',mods.map(m=>m.replace('MODULO ','M')),pcts,pcts.map(cp),{ymax:100,ypct:true});
+    },80);
+  });
+
+  document.getElementById('tab-programa').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAB: NIVEL INICIAL
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderNivel() {
+  const agg = getAllAgg();
+  const cis = Object.keys(PERSONAL).filter(ci=>{const p=PERSONAL[ci]; return p.nivel==='Inicial'||(p.tipo_bv||agg[ci]?.tipo)==='BV-B';});
+  const profiles = cis.map(ci=>mergeProfile(ci,agg));
+
+  if (!profiles.length) { document.getElementById('tab-nivel').innerHTML='<div class="empty"><div class="ei">📭</div><p>Sin datos de nivel inicial</p></div>'; return; }
+
+  const totS=profiles.reduce((s,p)=>s+p.sesiones,0); const totA=profiles.reduce((s,p)=>s+p.asistidas,0);
+  const ap=pct(totA,totS); const allN=profiles.flatMap(p=>p.notas); const na=avg(allN);
+  const totH=profiles.reduce((s,p)=>s+p.hrs,0);
+  const sorted=[...profiles].filter(p=>p.sesiones>0).sort((a,b)=>pct(b.asistidas,b.sesiones)-pct(a.asistidas,a.sesiones));
+  const best=sorted[0]; const worst=sorted[sorted.length-1];
+  const modP=Object.keys(MOD_TOTAL).map(m=>pct(profiles.filter(p=>p.modulos[m]&&p.modulos[m].lec_ok>0).length,profiles.length));
+  const modsOk=modP.filter(v=>v>=80).length;
+  const notaBuckets={'<60':0,'60-69':0,'70-79':0,'80-89':0,'90-100':0};
+  allN.forEach(n=>{if(n<60)notaBuckets['<60']++;else if(n<70)notaBuckets['60-69']++;else if(n<80)notaBuckets['70-79']++;else if(n<90)notaBuckets['80-89']++;else notaBuckets['90-100']++;});
+
+  document.getElementById('tab-nivel').innerHTML=`
+    <div class="shdr"><div><div class="stitle">Brigadistas Nivel Inicial</div><div class="ssub">Período: ${periodLabel()}</div></div></div>
+    <div class="kg">
+      <div class="kpi"><div class="kl">Total</div><div class="kv">${profiles.length}</div></div>
+      <div class="kpi g"><div class="kl">% Asistencia</div><div class="kv">${ap}%</div></div>
+      <div class="kpi b"><div class="kl">Nota promedio</div><div class="kv">${na?f1(na):'—'}</div></div>
+      <div class="kpi y"><div class="kl">Horas totales</div><div class="kv">${Math.round(totH)}</div></div>
+      <div class="kpi"><div class="kl">Módulos ≥80%</div><div class="kv">${modsOk}/${Object.keys(MOD_TOTAL).length}</div></div>
+    </div>
+    <div class="rcs">
+      <div class="rc top"><div class="rcl">🏆 Mayor asistencia</div><div class="rcn">${best?.nombre||'—'}</div><div class="rcs2">${best?.area||''}</div><div class="rcv">${best?pct(best.asistidas,best.sesiones)+'%':'—'}</div></div>
+      <div class="rc bot"><div class="rcl">⚠ Menor asistencia</div><div class="rcn">${worst?.nombre||'—'}</div><div class="rcs2">${worst?.area||''}</div><div class="rcv">${worst?pct(worst.asistidas,worst.sesiones)+'%':'—'}</div></div>
+    </div>
+    <div class="g2">
+      <div class="panel" style="margin:0"><div class="ph"><span class="pt">📈 Avance por módulo</span></div><div class="pb"><div class="cw"><canvas id="ch-nv-m"></canvas></div></div></div>
+      <div class="panel" style="margin:0"><div class="ph"><span class="pt">🎯 Distribución de notas</span></div><div class="pb"><div class="cw"><canvas id="ch-nv-n"></canvas></div></div></div>
+    </div>
+    <div class="panel"><div class="ph"><span class="pt">📋 Todos los brigadistas · nivel inicial</span></div>
+    <div style="overflow-x:auto"><table class="dt"><thead><tr><th>Nombre</th><th>CI</th><th>Área</th><th>Asistencia</th><th>Horas</th><th>Nota</th></tr></thead>
+    <tbody>${sorted.map(p=>{const ap2=pct(p.asistidas,p.sesiones);const na2=avg(p.notas);return`<tr>
+      <td style="cursor:pointer;color:var(--blu)" onclick="goTab('individual');setTimeout(()=>{el('sci').value='${p.ci}';onSearch()},50)">${p.nombre}</td>
+      <td class="mono">${p.ci}</td><td>${p.area}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><span class="mono" style="color:${ac(ap2)}">${ap2}%</span><div class="abw" style="width:50px"><div class="ab" style="width:${ap2}%;background:${ac(ap2)}"></div></div></div></td>
+      <td class="mono">${f1(p.hrs)}</td>
+      <td class="mono" style="color:${na2>=60?'var(--grn)':na2?'var(--red)':'var(--mut)'}">${na2?Math.round(na2):'—'}</td></tr>`;}).join('')}
+    </tbody></table></div></div>`;
+
+  setTimeout(()=>{
+    mk('ch-nv-m','bar',Object.keys(MOD_TOTAL).map(m=>m.replace('MODULO ','M')),modP,modP.map(cp),{ymax:100,ypct:true});
+    mk('ch-nv-n','bar',Object.keys(notaBuckets),Object.values(notaBuckets),['#cf222e','#d29922','#f48c06','#2ea043','#388bfd'],{});
+  },80);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAB: TENDENCIA TEMPORAL
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderTendencia() {
+  // Group by month, compute attendance rate & avg hours
+  const byMonth = {};
+  for (const d of RAW) {
+    if (!d.fecha) continue;
+    const key = `${d.fecha.getFullYear()}-${String(d.fecha.getMonth()+1).padStart(2,'0')}`;
+    if (!byMonth[key]) byMonth[key] = { asistidas:0, total:0, hrs:0, notas:[], cis:new Set() };
+    byMonth[key].total++;
+    if (d.asistio) { byMonth[key].asistidas++; byMonth[key].hrs += d.hrs; }
+    if (d.nota !== null) byMonth[key].notas.push(d.nota);
+    byMonth[key].cis.add(d.ci);
+  }
+  const months = Object.keys(byMonth).sort();
+  const asisArr = months.map(m=>pct(byMonth[m].asistidas, byMonth[m].total));
+  const hrsArr  = months.map(m=>+(byMonth[m].hrs / (byMonth[m].cis.size||1)).toFixed(1));
+  const notaArr = months.map(m=>avg(byMonth[m].notas)?+avg(byMonth[m].notas).toFixed(1):null);
+  const brigArr = months.map(m=>byMonth[m].cis.size);
+
+  // By area over months
+  const areas = ['Mina','Planta','Servicios'];
+  const areaMonthData = {};
+  areas.forEach(a => { areaMonthData[a] = {}; months.forEach(m => areaMonthData[a][m]={asistidas:0,total:0}); });
+  for (const d of RAW) {
+    if (!d.fecha) continue;
+    const key=`${d.fecha.getFullYear()}-${String(d.fecha.getMonth()+1).padStart(2,'0')}`;
+    const area = (PERSONAL[d.ci]?.area||d.area||'').trim();
+    if (areaMonthData[area]) { areaMonthData[area][key].total++; if(d.asistio) areaMonthData[area][key].asistidas++; }
+  }
+
+  document.getElementById('tab-tendencia').innerHTML=`
+    <div class="shdr"><div><div class="stitle">Tendencia temporal</div><div class="ssub">Evolución histórica del programa — todos los datos disponibles</div></div></div>
+    <div class="panel"><div class="ph"><span class="pt">📅 % Asistencia mensual (programa completo)</span></div><div class="pb"><div class="cw" style="height:200px"><canvas id="ch-tr-a"></canvas></div></div></div>
+    <div class="g2">
+      <div class="panel" style="margin:0"><div class="ph"><span class="pt">⏱ Promedio de horas por brigadista/mes</span></div><div class="pb"><div class="cw cw-sm"><canvas id="ch-tr-h"></canvas></div></div></div>
+      <div class="panel" style="margin:0"><div class="ph"><span class="pt">👥 Brigadistas activos por mes</span></div><div class="pb"><div class="cw cw-sm"><canvas id="ch-tr-b"></canvas></div></div></div>
+    </div>
+    <div class="panel"><div class="ph"><span class="pt">📍 % Asistencia por área a lo largo del tiempo</span></div><div class="pb"><div class="cw" style="height:200px"><canvas id="ch-tr-ar"></canvas></div></div></div>
+    <div class="panel"><div class="ph"><span class="pt">📝 Nota promedio mensual</span></div><div class="pb"><div class="cw cw-sm"><canvas id="ch-tr-n"></canvas></div></div></div>`;
+
+  const tickCol = '#8b949e'; const gridCol = '#30363d';
+  const baseLineOpts = { responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:tickCol,font:{size:11}}}}, scales:{ x:{grid:{color:gridCol},ticks:{color:tickCol,maxRotation:45,font:{size:10}}}, y:{grid:{color:gridCol},ticks:{color:tickCol}} } };
+
+  CHARTS['ch-tr-a'] = new Chart(document.getElementById('ch-tr-a'), { type:'line',
+    data:{ labels:months, datasets:[{ label:'% Asistencia', data:asisArr, borderColor:'#e85d04', backgroundColor:'rgba(232,93,4,.1)', tension:.3, fill:true, pointRadius:3 }] },
+    options:{...baseLineOpts, scales:{...baseLineOpts.scales, y:{...baseLineOpts.scales.y, max:100, ticks:{...baseLineOpts.scales.y.ticks, callback:v=>v+'%'}}}}
+  });
+  CHARTS['ch-tr-h'] = new Chart(document.getElementById('ch-tr-h'), { type:'bar',
+    data:{ labels:months, datasets:[{ label:'Hrs/brigadista', data:hrsArr, backgroundColor:'#f48c06', borderRadius:3 }] },
+    options:{...baseLineOpts, plugins:{legend:{display:false}}}
+  });
+  CHARTS['ch-tr-b'] = new Chart(document.getElementById('ch-tr-b'), { type:'bar',
+    data:{ labels:months, datasets:[{ label:'Brigadistas', data:brigArr, backgroundColor:'#388bfd', borderRadius:3 }] },
+    options:{...baseLineOpts, plugins:{legend:{display:false}}}
+  });
+  CHARTS['ch-tr-ar'] = new Chart(document.getElementById('ch-tr-ar'), { type:'line',
+    data:{ labels:months, datasets: areas.map((a,i)=>({
+      label:a, data:months.map(m=>pct(areaMonthData[a][m].asistidas,areaMonthData[a][m].total||1)),
+      borderColor:['#e85d04','#388bfd','#2ea043'][i], tension:.3, fill:false, pointRadius:2
+    })) },
+    options:{...baseLineOpts, scales:{...baseLineOpts.scales, y:{...baseLineOpts.scales.y, max:100, ticks:{callback:v=>v+'%',color:tickCol}}}}
+  });
+  CHARTS['ch-tr-n'] = new Chart(document.getElementById('ch-tr-n'), { type:'line',
+    data:{ labels:months, datasets:[{ label:'Nota prom.', data:notaArr, borderColor:'#a371f7', backgroundColor:'rgba(163,113,247,.1)', tension:.3, fill:true, pointRadius:3, spanGaps:true }] },
+    options:{...baseLineOpts, plugins:{legend:{display:false}}, scales:{...baseLineOpts.scales, y:{...baseLineOpts.scales.y, min:0, max:100}}}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAB: VERIFICAR DATOS
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderVerificar() {
+  // Compute current parser output for comparison
+  const totalRows = RAW.length;
+  const rowsConHrs = RAW.filter(d=>d.asistio).length;
+  const rowsSinHrs = RAW.filter(d=>!d.asistio).length;
+  const cisUnicos = new Set(RAW.map(d=>d.ci).filter(Boolean)).size;
+  const totalHrs = RAW.reduce((s,d)=>s+(d.asistio?d.hrs:0),0);
+  const topCI = '4151385';
+  const topRows = RAW.filter(d=>d.ci===topCI);
+  const topHrs = topRows.reduce((s,d)=>s+(d.asistio?d.hrs:0),0);
+  const topSes = topRows.length;
+  const topAsis = topRows.filter(d=>d.asistio).length;
+
+  const porAño = {};
+  for (const yr of [2024,2025,2026]) {
+    const yrR = RAW.filter(d=>d.fecha&&d.fecha.getFullYear()===yr);
+    porAño[yr] = { registros:yrR.length, hrs:yrR.reduce((s,d)=>s+(d.asistio?d.hrs:0),0), brigadistas:new Set(yrR.map(d=>d.ci)).size };
+  }
+
+  function chk(got, expected, fmt='') {
+    const match = Math.abs(got - expected) < 0.01;
+    return `<span class="${match?'vmatch':'vwrong'}">${got}${fmt} ${match?'✓':'✗ (esperado: '+expected+fmt+')'}</span>`;
+  }
+  function chkS(got, expected) {
+    const match = got === expected;
+    return `<span class="${match?'vmatch':'vwrong'}">${got} ${match?'✓':'✗ (esperado: '+expected+')'}</span>`;
+  }
+
+  document.getElementById('tab-verificar').innerHTML = `
+    <div class="shdr"><div><div class="stitle">✅ Verificación de integridad de datos</div><div class="ssub">Compará los valores calculados por la herramienta contra los valores auditados manualmente con Python</div></div></div>
+
+    <div class="verify">
+      <h3>🔢 Totales generales</h3>
+      <div class="vrow"><span class="vk">Total registros en BD_seg</span><span class="vv">${chk(totalRows, GROUND_TRUTH.total_rows)}</span></div>
+      <div class="vrow"><span class="vk">Registros con TIEMPO > 0 (asistencias)</span><span class="vv">${chk(rowsConHrs, GROUND_TRUTH.rows_with_hrs)}</span></div>
+      <div class="vrow"><span class="vk">Registros sin tiempo (faltantes)</span><span class="vv">${chk(rowsSinHrs, GROUND_TRUTH.rows_sin_hrs)}</span></div>
+      <div class="vrow"><span class="vk">CIs únicos en BD_seg</span><span class="vv">${chk(cisUnicos, GROUND_TRUTH.cis_unicos)}</span></div>
+      <div class="vrow"><span class="vk">Horas totales del programa</span><span class="vv">${chk(+totalHrs.toFixed(1), GROUND_TRUTH.total_hrs, ' hr')}</span></div>
+    </div>
+
+    <div class="verify">
+      <h3>👤 Persona de referencia: Melian Mamani Llanque (CI 4151385)</h3>
+      <div class="vrow"><span class="vk">Total filas (sesiones)</span><span class="vv">${chk(topSes, GROUND_TRUTH.top_person.sesiones)}</span></div>
+      <div class="vrow"><span class="vk">Asistencias</span><span class="vv">${chk(topAsis, GROUND_TRUTH.top_person.asis)}</span></div>
+      <div class="vrow"><span class="vk">Horas totales</span><span class="vv">${chk(+topHrs.toFixed(1), GROUND_TRUTH.top_person.hrs, ' hr')}</span></div>
+    </div>
+
+    <div class="verify">
+      <h3>📅 Distribución temporal</h3>
+      ${[2024,2025,2026].map(yr=>`
+      <div class="vrow"><span class="vk">${yr} — Registros</span><span class="vv">${chk(porAño[yr].registros, GROUND_TRUTH.por_año[yr].registros)}</span></div>
+      <div class="vrow"><span class="vk">${yr} — Horas</span><span class="vv">${chk(+porAño[yr].hrs.toFixed(1), GROUND_TRUTH.por_año[yr].hrs, ' hr')}</span></div>
+      <div class="vrow"><span class="vk">${yr} — Brigadistas únicos</span><span class="vv">${chk(porAño[yr].brigadistas, GROUND_TRUTH.por_año[yr].brigadistas)}</span></div>`).join('')}
+    </div>
+
+    <div class="verify">
+      <h3>📋 Integridad del archivo cargado</h3>
+      <div class="vrow"><span class="vk">Hojas detectadas</span><span class="vv vmatch">BD_seg ✓ · BD_personal ✓</span></div>
+      <div class="vrow"><span class="vk">Brigadistas en BD_personal</span><span class="vv">${chk(Object.keys(PERSONAL).length, 227)}</span></div>
+      <div class="vrow"><span class="vk">Módulos únicos en programa</span><span class="vv">${chk(Object.keys(MOD_TOTAL).length, 9)}</span></div>
+    </div>
+
+    <p style="font-size:11px;color:var(--mut);margin-top:12px">Los valores esperados fueron auditados el 18/06/2026 directamente sobre el archivo original usando Python/openpyxl. Si todos los valores muestran ✓, la herramienta está leyendo e interpretando los datos correctamente.</p>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PDF
+// ═══════════════════════════════════════════════════════════════════════════════
+async function exportPDF() {
+  toast('⏳ Generando PDF…');
+  const target = document.getElementById('tab-'+ACTIVE_TAB);
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+  const W=297,H=210;
+  pdf.setFillColor(232,93,4); pdf.rect(0,0,W,11,'F');
+  pdf.setTextColor(255,255,255); pdf.setFontSize(9); pdf.setFont('helvetica','bold');
+  pdf.text(`PROGRAMA DE CAPACITACIÓN · BRIGADAS VOLUNTARIAS · MINA SAN CRISTÓBAL — ${periodLabel().toUpperCase()}`, 10, 7.5);
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
+  pdf.text(new Date().toLocaleString('es-BO'), W-10, 7.5, {align:'right'});
+  const canvas = await html2canvas(target,{backgroundColor:'#0d1117',scale:1.5,useCORS:true,logging:false});
+  const imgW=W-20; const availH=H-20;
+  const imgH=(canvas.height*imgW)/canvas.width;
+  const pages=Math.ceil(imgH/availH); const sliceH=canvas.height/pages;
+  for(let pg=0;pg<pages;pg++){
+    if(pg>0) pdf.addPage();
+    const off=document.createElement('canvas'); off.width=canvas.width; off.height=sliceH;
+    off.getContext('2d').drawImage(canvas,0,pg*sliceH,canvas.width,sliceH,0,0,canvas.width,sliceH);
+    pdf.addImage(off.toDataURL('image/jpeg',.88),'JPEG',10,14,imgW,(sliceH*imgW)/canvas.width);
+  }
+  pdf.setFillColor(22,27,34); pdf.rect(0,H-7,W,7,'F');
+  pdf.setTextColor(139,148,158); pdf.setFontSize(7);
+  pdf.text('Generado por Dashboard Brigadas MSC · Datos confidenciales · Procesamiento local',W/2,H-2.5,{align:'center'});
+  pdf.save(`reporte-${ACTIVE_TAB}-${new Date().toISOString().slice(0,10)}.pdf`);
+  toast('✓ PDF descargado');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHART FACTORY
+// ═══════════════════════════════════════════════════════════════════════════════
+function mk(id, type, labels, data, colors, opts={}) {
+  if (!document.getElementById(id)) return;
+  if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; }
+  const isArr = Array.isArray(colors);
+  CHARTS[id] = new Chart(document.getElementById(id), { type,
+    data:{ labels, datasets:[{ data, backgroundColor: isArr&&colors.length>1?colors:colors[0]||'#e85d04', borderRadius:type==='bar'?4:0, tension:.3, fill:false }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ max:opts.ymax||undefined, min:opts.ymin||undefined, grid:{color:'#30363d'}, ticks:{color:'#8b949e', callback: opts.ypct ? v=>v+'%' : undefined} },
+               x:{ grid:{display:false}, ticks:{color:'#8b949e'} } }
+    }
+  });
+}
+
+function destroyAll() { Object.values(CHARTS).forEach(c=>{ try{c.destroy()}catch{} }); CHARTS={}; }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════════════════════
+function s(v){ return v===null||v===undefined?'':String(v).trim(); }
+function el(id){ return document.getElementById(id); }
+function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
+function pct(a,b){ return b ? Math.round(a/b*100) : 0; }
+function f1(n){ return n!==null&&n!==undefined ? Number(n).toFixed(1) : '—'; }
+function cp(p){ return p>=80?'var(--grn)':p>=40?'var(--ylw)':'var(--red)'; }
+function ac(p){ return p>=80?'var(--grn)':p>=50?'var(--ylw)':'var(--red)'; }
+function bdg(t){ const cls=t==='BV-M'?'bm':t==='BV-B'?'bb':'bs'; return t?`<span class="badge ${cls}">${t}</span>`:''; }
+function sbadge(ok,tot){ const p=pct(ok,tot); if(!ok) return `<span class="ms sno">PENDIENTE</span>`; return p>=80?`<span class="ms sok">COMPLETO</span>`:`<span class="ms swip">EN CURSO</span>`; }
+function periodLabel(){
+  const f=TIME_FILTER;
+  if(f.mode==='all') return 'Historial completo (2024–2026)';
+  if(f.mode==='y2024') return 'Año 2024';
+  if(f.mode==='y2025') return 'Año 2025';
+  if(f.mode==='y2026') return 'Año 2026';
+  if(f.mode==='last30') return 'Último mes';
+  if(f.mode==='last60') return 'Último bimestre';
+  if(f.mode==='last90') return 'Último trimestre';
+  if(f.mode==='last180') return 'Último semestre';
+  if(f.from||f.to) return `${f.from?f.from.toLocaleDateString('es-BO'):'—'} → ${f.to?f.to.toLocaleDateString('es-BO'):'—'}`;
+  return 'Período personalizado';
+}
+function showLd(v){ el('ld').style.display=v?'flex':'none'; }
+function toast(msg){ const t=el('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3200); }
+function resetApp(){ destroyAll(); RAW=[]; PERSONAL={}; MOD_TOTAL={}; el('app').style.display='none'; el('up').style.display='flex'; el('fi').value=''; }
+</script>
+</body>
+</html>
