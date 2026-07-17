@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dashboard · Brigadas Voluntarias MSC</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<!-- ── PANTALLA DE CARGA ─────────────────────────────────────────────────── -->
+<div id="up">
+  <div class="up-card">
+    <div class="up-logo-wrap">
+      <span style="font-size:28px;font-weight:700;color:#78be44">&#x2074;Insein</span>
+    </div>
+    <div class="up-title">Dashboard de Capacitación</div>
+    <div class="up-sub">Brigadas Voluntarias · Mina San Cristóbal</div>
+    <div class="dz" id="dz">
+      <div class="dz-icon">📁</div>
+      <div style="font-size:14px;font-weight:600;color:#1a2326;margin-bottom:4px">Cargar planilla</div>
+      <div style="font-size:12px;color:#6b7c82">Clic aquí o arrastrá el archivo .xlsx</div>
+    </div>
+    <input type="file" id="fi" accept=".xlsx,.xlsm" style="display:none"/>
+    <p class="up-note">
+      <span style="color:#78be44;font-weight:600">Procesamiento 100% local.</span>
+      Ningún dato sale de tu computadora.<br/>
+      Requiere hojas: <code>BD_seg</code>, <code>BD_personal</code>, <code>_tbl2</code>.
+    </p>
+  </div>
+</div>
+
+<!-- ── LOADER SPINNER ────────────────────────────────────────────────────── -->
+<div id="ld" style="display:none"></div>
+
+<!-- ── APP PRINCIPAL ─────────────────────────────────────────────────────── -->
+<div id="app" style="display:none">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+  <div class="tb-logo" style="display:flex;align-items:center;gap:12px">
+    <span style="font-size:22px;font-weight:700;color:#78be44">&#x2074;Insein</span>
+    <div class="tb-div"></div>
+    <div class="tb-info">
+      <div class="tb-name">Dashboard · Brigadas Voluntarias MSC</div>
+      <div class="tb-file" id="tbf"></div>
+    </div>
+  </div>
+  <div class="tb-right">
+    <button class="btn btn-primary btn-sm" onclick="goTab('informe')">📊 Informe mensual</button>
+    <button class="btn btn-ghost btn-sm" onclick="resetApp()">⇄ Cambiar</button>
+  </div>
+</div>
+
+  <!-- PERÍODO -->
+<div class="pbar" id="tbar-range" style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:8px 16px;background:#fff;border-bottom:1px solid #dde2e4">    
+    <button class="pb-btn" id="pb-todo"  onclick="setTPill('todo')" >Todo</button>
+    <button class="pb-btn" id="pb-2024"  onclick="setTPill('2024')" >2024</button>
+    <button class="pb-btn" id="pb-2025"  onclick="setTPill('2025')" >2025</button>
+    <button class="pb-btn active" id="pb-2026" onclick="setTPill('2026')">2026</button>
+    <button class="pb-btn" id="pb-mes"   onclick="setTPill('mes')"  >Último mes</button>
+    <button class="pb-btn" id="pb-trim"  onclick="setTPill('trim')" >Trimestre</button>
+    <button class="pb-btn" id="pb-sem"   onclick="setTPill('sem')"  >Semestre</button>
+    <span class="pbl" style="margin-left:8px">Rango:</span>
+    <input type="date" class="tdate" id="t-from" onchange="setCustomRange()"/>
+    <span style="font-size:11px;color:#6b7c82">→</span>
+    <input type="date" class="tdate" id="t-to" onchange="setCustomRange()"/>
+    <span id="reg-count" class="reg-count"></span>
+</div>
+
+  <!-- LAYOUT -->
+  <div class="body">
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <span class="nsec">Consultas</span>
+      <button class="nb active" onclick="goTab('individual')" id="nb-individual">
+        <span class="nb-icon">👤</span>Por brigadista
+      </button>
+      <button class="nb" onclick="goTab('grupo')" id="nb-grupo">
+        <span class="nb-icon">👥</span>Por grupo
+      </button>
+
+      <div class="ndiv"></div>
+      <span class="nsec">Por nivel</span>
+      <button class="nb" onclick="goTab('bvb')" id="nb-bvb">
+        <span class="nb-icon">🟢</span>Nv. Inicial (BV-B)
+      </button>
+      <button class="nb" onclick="goTab('bvm')" id="nb-bvm">
+        <span class="nb-icon">⭐</span>Nv. Medio (BV-M)
+      </button>
+      <button class="nb" onclick="goTab('ure')" id="nb-ure">
+        <span class="nb-icon">🚒</span>URE
+      </button>
+      <button class="nb" onclick="goTab('sinclasif')" id="nb-sinclasif">
+        <span class="nb-icon">⚠</span>Sin clasificar
+      </button>
+
+      <div class="ndiv"></div>
+      <span class="nsec">Herramientas</span>
+      <button class="nb" onclick="goTab('plansemanal')" id="nb-plansemanal">
+        <span class="nb-icon">📅</span>Plan Semanal
+      </button>
+      <button class="nb" onclick="goTab('informe')" id="nb-informe">
+        <span class="nb-icon">📊</span>Informe Mensual
+      </button>
+
+      <div class="ndiv"></div>
+      <button class="nb" onclick="goTab('verificar')" id="nb-verificar">
+        <span class="nb-icon">✅</span>Verificar datos
+      </button>
+    </nav>
+
+    <!-- CONTENIDO -->
+    <main class="content">
+      <div id="tab-individual"></div>
+      <div id="tab-grupo"       style="display:none"></div>
+      <div id="tab-bvb"         style="display:none"></div>
+      <div id="tab-bvm"         style="display:none"></div>
+      <div id="tab-ure"         style="display:none"></div>
+      <div id="tab-sinclasif"   style="display:none"></div>
+      <div id="tab-plansemanal" style="display:none"></div>
+      <div id="tab-informe"     style="display:none"></div>
+      <div id="tab-verificar"   style="display:none"></div>
+    </main>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<!-- LIBRERÍAS -->
+<script src="libs/xlsx.js"></script>
+<script src="libs/chart.js"></script>
+<script src="libs/jspdf.js"></script>
+<script src="libs/html2canvas.js"></script>
+<script src="libs/docx.js"></script>
+
+<!-- MÓDULOS -->
+<script src="js/utils.js"></script>
+<script src="js/parser.js"></script>
+<script src="js/core.js"></script>
+<script src="js/views-individual.js"></script>
+<script src="js/views-grupo.js"></script>
+<script src="js/views-nivel.js"></script>
+<script src="js/informe.js"></script>
+<script src="js/tendencia.js"></script>
+<script src="js/verificar.js"></script>
+<script src="js/exports.js"></script>
+
+</body>
+</html>
