@@ -114,6 +114,7 @@ function goTab(t){
   else if(t==='bvb') renderNivel('BV-B');
   else if(t==='bvm') renderNivel('BV-M');
   else if(t==='ure') renderNivel('URE-M');
+  else if(t==='grupomods') renderGrupoModulosShell();
   else if(t==='sinclasif') renderSinClasif();
   else if(t==='plansemanal') renderPlanSemanal();
   else if(t==='informe') renderInforme();

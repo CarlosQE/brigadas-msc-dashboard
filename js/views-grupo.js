@@ -248,3 +248,194 @@ function buildGroupPersonDetail(p){
   return rows||'<p style="color:#6b7c82;font-size:12px;padding:8px">Sin actividad en el período seleccionado.</p>';
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VISTA MÓDULOS/LECCIONES POR GRUPO
+// Selector de módulo → tabla brigadistas × lecciones (verde/rojo)
+// ═══════════════════════════════════════════════════════════════════════════
+function renderGrupoModulos(){
+  const fA2 = el('f-area2-mod')?.value ?? '';
+  const fG  = el('f-grupo-mod')?.value ?? '';
+  const fMod = el('f-mod-sel')?.value ?? '';
+  const cont = el('gcontent-mod');
+  if(!cont) return;
+
+  if(!fA2){ cont.innerHTML='<div class="empty"><div class="ei">👆</div><p>Seleccioná un área primero</p></div>'; return; }
+
+  // Brigadistas del grupo
+  const cis = Object.keys(PERSONAL).filter(ci=>{
+    const p = PERSONAL[ci];
+    if(p.area_2 !== fA2) return false;
+    if(fG && p.grupo !== fG) return false;
+    if(p.estado !== 'Activo') return false;
+    return true;
+  });
+
+  if(!cis.length){ cont.innerHTML='<div class="empty"><div class="ei">🔍</div><p>Sin brigadistas activos para este filtro</p></div>'; return; }
+
+  if(!fMod){ cont.innerHTML='<div class="empty"><div class="ei">📚</div><p>Seleccioná un módulo para ver el detalle de lecciones</p></div>'; return; }
+
+  // Aggregate con todos los datos (historial completo para cumplimiento)
+  const aggAll = aggregate(RAW.filter(d=>cis.includes(d.ci)&&d.asistio));
+
+  // Lecciones del módulo por tipo de brigadista
+  // Agrupamos brigadistas por tipo para mostrar solo lecciones pertinentes
+  const tipos = [...new Set(cis.map(ci=>PERSONAL[ci].tipo_bv).filter(Boolean))];
+
+  // Para cada brigadista, calcular estado de cada lección del módulo
+  const rows = cis.map(ci=>{
+    const p = PERSONAL[ci];
+    const col = TIPO_COL[p.tipo_bv] || 'hrs_BVM';
+    const lecs = PROGRAMA.filter(l=>l.modulo===fMod && l[col]>0);
+    if(!lecs.length) return null; // módulo no aplica a este tipo
+    const done = aggAll[ci]?.lecs_done || new Set();
+    return { ci, nombre:p.nombre, tipo:p.tipo_bv, lecs, done };
+  }).filter(Boolean);
+
+  if(!rows.length){
+    cont.innerHTML=`<div class="empty"><div class="ei">ℹ️</div><p>El módulo seleccionado no aplica a ningún brigadista de este grupo</p></div>`;
+    return;
+  }
+
+  // Get all unique lecciones for this module across types
+  const allLecs = [...new Map(
+    rows.flatMap(r=>r.lecs.map(l=>([`${l.unidad}|${l.leccion}`, l])))
+  ).values()].sort((a,b)=>a.leccion.localeCompare(b.leccion));
+
+  const temaModulo = PROGRAMA.find(l=>l.modulo===fMod)?.tema_mod || fMod;
+
+  // Summary counts
+  const totalBrig = rows.length;
+  const lecSummary = allLecs.map(l=>{
+    const key = `${l.modulo}|${l.unidad}|${l.leccion}`;
+    const doneCount = rows.filter(r=>r.done.has(key) && r.lecs.some(rl=>rl.leccion===l.leccion)).length;
+    const appCount  = rows.filter(r=>r.lecs.some(rl=>rl.leccion===l.leccion)).length;
+    return { lec:l, key, doneCount, appCount };
+  });
+
+  // Build table header
+  const thLecs = allLecs.map(l=>`
+    <th style="text-align:center;min-width:42px;padding:6px 4px">
+      <div style="font-family:Consolas,monospace;font-size:11px;font-weight:700">${l.leccion.replace('LECCION','L')}</div>
+      <div style="font-size:9px;color:#6b7c82;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.tema_lec}">${l.tema_lec.substring(0,10)}</div>
+    </th>`).join('');
+
+  // Summary row
+  const tdSummary = lecSummary.map(({doneCount,appCount})=>{
+    const pct = appCount ? Math.round(doneCount/appCount*100) : 0;
+    const color = pct>=80?'#5fa032':pct>=50?'#f0a500':'#d94f3d';
+    return `<td style="text-align:center;background:#f4f6f7;font-size:11px;font-weight:600;color:${color};padding:4px 2px">${doneCount}/${appCount}</td>`;
+  }).join('');
+
+  // Data rows
+  const dataRows = rows.map(r=>{
+    const cells = allLecs.map(l=>{
+      const key = `${l.modulo}|${l.unidad}|${l.leccion}`;
+      const applies = r.lecs.some(rl=>rl.leccion===l.leccion);
+      if(!applies) return `<td style="text-align:center;background:#f9f9f9;color:#dde2e4;font-size:12px">—</td>`;
+      const done = r.done.has(key);
+      return done
+        ? `<td style="text-align:center;background:#e8f5e0;color:#5fa032;font-size:14px;font-weight:700">✓</td>`
+        : `<td style="text-align:center;background:rgba(217,79,61,.08);color:#d94f3d;font-size:14px;font-weight:700">✗</td>`;
+    }).join('');
+
+    const totalApp  = r.lecs.length;
+    const totalDone = r.lecs.filter(l=>r.done.has(`${l.modulo}|${l.unidad}|${l.leccion}`)).length;
+    const pct = totalApp ? Math.round(totalDone/totalApp*100) : 0;
+    const pctColor = pct>=80?'#5fa032':pct>=50?'#f0a500':'#d94f3d';
+
+    return `<tr>
+      <td style="font-weight:500;white-space:nowrap;padding:6px 10px">${r.nombre}</td>
+      <td style="text-align:center">${bdg(r.tipo)}</td>
+      <td style="text-align:center;font-family:Consolas,monospace;font-weight:700;color:${pctColor}">${pct}%</td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  cont.innerHTML=`
+    <div class="panel">
+      <div class="ph">
+        <span class="pt">📋 ${fMod.replace('MODULO','Módulo')} — ${temaModulo}</span>
+        <span style="font-size:12px;color:#6b7c82">${totalBrig} brigadistas · ${fA2}${fG?' → '+fG:''}</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="dt" style="min-width:100%">
+          <thead>
+            <tr>
+              <th style="min-width:180px">Nombre</th>
+              <th style="text-align:center">Tipo</th>
+              <th style="text-align:center">Módulo</th>
+              ${thLecs}
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background:#f4f6f7">
+              <td style="font-size:11px;font-weight:600;color:#6b7c82;padding:4px 10px" colspan="2">Completaron / Aplica</td>
+              <td></td>
+              ${tdSummary}
+            </tr>
+            ${dataRows}
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:10px 16px;font-size:11px;color:#6b7c82;border-top:1px solid #dde2e4">
+        <span style="color:#5fa032;font-weight:600">✓ Completada</span> &nbsp;
+        <span style="color:#d94f3d;font-weight:600">✗ Pendiente</span> &nbsp;
+        <span style="color:#dde2e4">— No aplica al tipo</span>
+      </div>
+    </div>`;
+}
+
+function renderGrupoModulosShell(){
+  const areas2 = window._AREAS2 || [];
+  const optsA2 = areas2.map(a=>`<option value="${a}">${a}</option>`).join('');
+  const allMods = [...new Set(PROGRAMA.map(l=>l.modulo))];
+  const optsMod = allMods.map(m=>{
+    const tema = PROGRAMA.find(l=>l.modulo===m)?.tema_mod||m;
+    return `<option value="${m}">${m.replace('MODULO','M')} — ${tema}</option>`;
+  }).join('');
+
+  el('tab-grupomods').innerHTML=`
+    <div class="shdr"><div>
+      <div class="stitle">📋 Módulos y Lecciones por Grupo</div>
+      <div class="ssub">Seleccioná grupo y módulo para ver el estado de cada lección por brigadista</div>
+    </div></div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;align-items:flex-end;padding:14px;background:#f4f6f7;border-radius:6px;border:1px solid #dde2e4">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:12px;font-weight:600;color:#6b7c82">Área de trabajo</span>
+        <select class="fsel" id="f-area2-mod" onchange="onArea2ChangeMod()" style="min-width:200px">
+          <option value="">— Seleccioná un área —</option>
+          ${optsA2}
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:12px;font-weight:600;color:#6b7c82">Grupo de trabajo</span>
+        <select class="fsel" id="f-grupo-mod" onchange="renderGrupoModulos()" style="min-width:180px" disabled>
+          <option value="">Todos los grupos</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:12px;font-weight:600;color:#6b7c82">Módulo</span>
+        <select class="fsel" id="f-mod-sel" onchange="renderGrupoModulos()" style="min-width:260px">
+          <option value="">— Seleccioná un módulo —</option>
+          ${optsMod}
+        </select>
+      </div>
+    </div>
+    <div id="gcontent-mod"></div>`;
+}
+
+function onArea2ChangeMod(){
+  const a2  = el('f-area2-mod')?.value||'';
+  const selG = el('f-grupo-mod');
+  if(!a2){
+    selG.innerHTML='<option value="">Todos los grupos</option>';
+    selG.disabled=true;
+  } else {
+    const grupos=[...(window._A2_MAP[a2]||new Set())].sort();
+    selG.innerHTML='<option value="">Todos los grupos de '+a2+'</option>'
+      +grupos.map(g=>`<option value="${g}">${g}</option>`).join('');
+    selG.disabled=false;
+  }
+  renderGrupoModulos();
+}
