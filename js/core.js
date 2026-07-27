@@ -18,13 +18,15 @@ function setCustomRange(){
 }
 function buildTF(mode){
   const now=new Date(),D=86400000;
-  if(mode==='all') return{mode,from:null,to:null};
-  if(mode==='y2024') return{mode,from:new Date('2024-01-01'),to:new Date('2024-12-31T23:59:59')};
-  if(mode==='y2025') return{mode,from:new Date('2025-01-01'),to:new Date('2025-12-31T23:59:59')};
-  if(mode==='y2026') return{mode,from:new Date('2026-01-01'),to:new Date('2026-12-31T23:59:59')};
+  function d0(y,m,day){return new Date(y,m-1,day,0,0,0,0);}  // local midnight
+  function d23(y,m,day){return new Date(y,m-1,day,23,59,59,999);}
+  if(mode==='all')    return{mode,from:null,to:null};
+  if(mode==='y2024')  return{mode,from:d0(2024,1,1), to:d23(2024,12,31)};
+  if(mode==='y2025')  return{mode,from:d0(2025,1,1), to:d23(2025,12,31)};
+  if(mode==='y2026')  return{mode,from:d0(2026,1,1), to:d23(2026,12,31)};
   if(mode==='last30') return{mode,from:new Date(now-30*D),to:now};
   if(mode==='last90') return{mode,from:new Date(now-90*D),to:now};
-  if(mode==='last180') return{mode,from:new Date(now-180*D),to:now};
+  if(mode==='last180')return{mode,from:new Date(now-180*D),to:now};
   return{mode,from:null,to:null};
 }
 function applyTF(data){
@@ -118,7 +120,7 @@ function goTab(t){
   else if(t==='sinclasif') renderSinClasif();
   else if(t==='organigrama') renderOrgShell();
   else if(t==='plansemanal') renderPlanSemanal();
-  else if(t==='informe') renderInforme();
+  else if(t==='indicadores') renderIndicadoresShell();
   else if(t==='verificar') renderVerificar();
 }
 function renderCurrentTab(){goTab(ACTIVE_TAB);}

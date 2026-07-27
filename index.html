@@ -46,7 +46,7 @@
       </div>
     </div>
     <div class="tbar-right">
-      <button class="btn btn-primary btn-sm" onclick="goTab('informe')">📊 Informe mensual</button>
+      <button class="btn btn-primary btn-sm" onclick="goTab('indicadores')">📈 Indicadores</button>
       <button class="btn btn-ghost btn-sm" onclick="resetApp()">⇄ Cambiar</button>
     </div>
   </div>
@@ -54,10 +54,10 @@
   <!-- PERÍODO -->
   <div class="pbar" id="tbar-range">
     <span class="pbl">PERÍODO:</span>
-    <button class="pb-btn" id="pb-todo"  onclick="setTPill('todo')" >Todo</button>
+    <button class="pb-btn active" id="pb-todo" onclick="setTPill('todo')">Todo</button>
     <button class="pb-btn" id="pb-2024"  onclick="setTPill('2024')" >2024</button>
     <button class="pb-btn" id="pb-2025"  onclick="setTPill('2025')" >2025</button>
-    <button class="pb-btn active" id="pb-2026" onclick="setTPill('2026')">2026</button>
+    <button class="pb-btn" id="pb-2026" onclick="setTPill('2026')">2026</button>
     <button class="pb-btn" id="pb-mes"   onclick="setTPill('mes')"  >Último mes</button>
     <button class="pb-btn" id="pb-trim"  onclick="setTPill('trim')" >Trimestre</button>
     <button class="pb-btn" id="pb-sem"   onclick="setTPill('sem')"  >Semestre</button>
@@ -107,9 +107,9 @@
       <button class="nb" onclick="goTab('plansemanal')" id="nb-plansemanal">
         <span class="nb-icon">📅</span>Plan Semanal
       </button>
-      <button class="nb" onclick="goTab('informe')" id="nb-informe">
-        <span class="nb-icon">📊</span>Informe Mensual
-      </button>
+      <button class="nb" onclick="goTab('indicadores')" id="nb-indicadores">
+  <span class="nb-icon">📈</span>Indicadores
+</button>
 
       <div class="ndiv"></div>
       <button class="nb" onclick="goTab('verificar')" id="nb-verificar">
@@ -128,7 +128,7 @@
       <div id="tab-sinclasif"   style="display:none"></div>
       <div id="tab-organigrama" style="display:none"></div>
       <div id="tab-plansemanal" style="display:none"></div>
-      <div id="tab-informe"     style="display:none"></div>
+      <div id="tab-indicadores" style="display:none"></div>
       <div id="tab-verificar"   style="display:none"></div>
     </main>
 
@@ -153,7 +153,7 @@
 <script src="js/views-grupo.js"></script>
 <script src="js/views-organigrama.js"></script>
 <script src="js/views-nivel.js"></script>
-<script src="js/informe.js"></script>
+<script src="js/views-indicadores.js"></script>
 <script src="js/tendencia.js"></script>
 <script src="js/verificar.js"></script>
 <script src="js/exports.js"></script>

@@ -10,7 +10,7 @@ let ACTIVE_TAB = 'individual';
 const TIPO_COL   = {'BV-B':'hrs_BVB','BV-M':'hrs_BVM','GPR':'hrs_GPR','LE':'hrs_LE','URE-M':'hrs_UREM'};
 const TIPO_LABEL = {'BV-B':'Nivel Inicial','BV-M':'Nivel Medio','URE-M':'URE','LE':'Líderes Evacuación','GPR':'GPR','':'Sin clasificar'};
 const TIPO_BADGE = {'BV-M':'b-bvm','BV-B':'b-bvb','URE-M':'b-ure','LE':'b-le','GPR':'b-gpr','':'b-bvb'};
-const ALL_TABS   = ['individual','grupo','grupomods','bvb','bvm','ure','sinclasif','organigrama','plansemanal','informe','verificar'];
+const ALL_TABS = ['individual','grupo','grupomods','bvb','bvm','ure','sinclasif','organigrama','plansemanal','indicadores','verificar'];
 
 // Ground truth for verification panel
 const GT = {
