@@ -55,22 +55,73 @@ function parseTbl2(wb) {
   }
 }
 
+function normalizeOrg(v) {
+  if (!v) return '';
+  return v.toString().trim()
+    // Normalize vicepresidencias
+    .replace(/Vicepresidencia de operaciones/i, 'Vicepresidencia de Operaciones')
+    .replace(/Vicepresidencia de servicios generales/i, 'Vicepresidencia de Servicios Generales')
+    .replace(/Vicepresidencia corporativa/i, 'Vicepresidencia Corporativa')
+    .replace(/Vicepresidencia de finanzas/i, 'Vicepresidencia de Finanzas');
+}
+
 function parsePersonal(wb) {
   PERSONAL = {};
   const rows = XLSX.utils.sheet_to_json(wb.Sheets['BD_personal'], { header:1, defval:null });
+  // Detect layout: check if row[1][3] looks like an org field (VP) or a status field
+  // New layout: r[3]=VP, r[4]=GER, r[5]=SUP, r[6]=SUPERVISOR, r[7]=Estado_AP
+  // Old layout: r[3]=Estado_AP, r[6]=tipo_bv, r[11]=grupo, r[12]=area_2
+  const header = rows[0] || [];
+  const hasOrgCols = header[3] && String(header[3]).toLowerCase().includes('vicepresidencia');
+
   for (let i = 1; i < rows.length; i++) {
-    const r = rows[i]; const ci = s(r[1]); if(!ci) continue;
-    // Normalize dirty data from source
-    let area_2 = s(r[12]);
-    let grupo   = s(r[11]);
-    // Fix capitalization inconsistencies
-    if (area_2 === 'CAMPAMENTO')       area_2 = 'Campamento';
-    if (grupo   === 'CAMPAMENTO')      grupo   = 'Campamento';
-    if (area_2 === 'Planta')           area_2 = 'Operaciones Planta';
-    if (grupo   === 'Seguridad Fisica') grupo  = 'Seguridad Física';
+    const r = rows[i];
+    const ci = s(r[1]);
+    if (!ci) continue;
+
+    let vp, gerencia, superintendencia, supervisor, estado, tipo_bv, nivel, area, grupo, area_2;
+
+    if (hasOrgCols) {
+      // NEW layout (4 org cols inserted at 3-6)
+      // r[0]=nro, r[1]=CI, r[2]=nombre
+      // r[3]=VICEPRESIDENCIA, r[4]=GERENCIA, r[5]=SUPERINTENDENCIA, r[6]=SUPERVISOR
+      // r[7]=Estado_AP, r[8]=Fecha_AC, r[9]=Motivo_AC
+      // r[10]=BV-GPR-LE, r[11]=tipo, r[12]=nivel, r[13]=Area
+      // r[14]=NUMERO CELULAR, r[15]=GRUPO DE TRABAJO, r[16]=Area_2
+      vp             = normalizeOrg(r[3]);
+      gerencia       = normalizeOrg(r[4]);
+      superintendencia = normalizeOrg(r[5]);
+      supervisor     = s(r[6]);
+      estado         = s(r[7]);
+      tipo_bv        = s(r[10]);
+      nivel          = s(r[12]);
+      area           = s(r[13]);
+      grupo          = s(r[15]);
+      area_2         = s(r[16]);
+    } else {
+      // OLD layout (no org cols)
+      // r[3]=Estado_AP, r[6]=BV-GPR-LE, r[8]=nivel, r[9]=area
+      // r[11]=GRUPO DE TRABAJO, r[12]=Area_2, r[17]=supervisor
+      estado    = s(r[3]);
+      tipo_bv   = s(r[6]);
+      nivel     = s(r[8]);
+      area      = s(r[9]);
+      grupo     = s(r[11]);
+      area_2    = s(r[12]);
+      supervisor = s(r[17]);
+      vp = gerencia = superintendencia = '';
+    }
+
+    // Normalize dirty data
+    if (area_2 === 'CAMPAMENTO')        area_2 = 'Campamento';
+    if (grupo  === 'CAMPAMENTO')        grupo  = 'Campamento';
+    if (area_2 === 'Planta')            area_2 = 'Operaciones Planta';
+    if (grupo  === 'Seguridad Fisica')  grupo  = 'Seguridad Física';
+
     PERSONAL[ci] = {
-      nombre:s(r[2]), estado:s(r[3]), tipo_bv:s(r[6]), nivel:s(r[8]),
-      area:s(r[9]), grupo, area_2, supervisor:s(r[17])
+      nombre: s(r[2]), estado, tipo_bv, nivel,
+      area, grupo, area_2, supervisor,
+      vp, gerencia, superintendencia
     };
   }
 }
@@ -96,4 +147,3 @@ function parseSeg(wb) {
     RAW.push({ci:s(r[1]),modulo:s(r[4]),nota,hrs,fecha,tipo:s(r[17]),area_seg:s(r[18]),asistio:hrs>0,lecKey});
   }
 }
-

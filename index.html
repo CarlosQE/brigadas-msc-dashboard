@@ -37,23 +37,23 @@
 <div id="app" style="display:none">
 
   <!-- TOPBAR -->
-  <div class="topbar">
-  <div class="tb-logo" style="display:flex;align-items:center;gap:12px">
-    <span style="font-size:22px;font-weight:700;color:#78be44">&#x2074;Insein</span>
-    <div class="tb-div"></div>
-    <div class="tb-info">
-      <div class="tb-name">Dashboard · Brigadas Voluntarias MSC</div>
-      <div class="tb-file" id="tbf"></div>
+  <div class="tbar">
+    <div class="tbar-left">
+      <span style="font-size:22px;font-weight:700;color:#78be44;letter-spacing:-0.5px">&#x2074;Insein</span>
+      <div style="margin-left:12px">
+        <div class="ssub" id="tbf" style="font-size:11px"></div>
+        <div class="ssub" id="app-file" style="font-size:11px"></div>
+      </div>
+    </div>
+    <div class="tbar-right">
+      <button class="btn btn-primary btn-sm" onclick="goTab('informe')">📊 Informe mensual</button>
+      <button class="btn btn-ghost btn-sm" onclick="resetApp()">⇄ Cambiar</button>
     </div>
   </div>
-  <div class="tb-right">
-    <button class="btn btn-primary btn-sm" onclick="goTab('informe')">📊 Informe mensual</button>
-    <button class="btn btn-ghost btn-sm" onclick="resetApp()">⇄ Cambiar</button>
-  </div>
-</div>
 
   <!-- PERÍODO -->
-<div class="pbar" id="tbar-range" style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:8px 16px;background:#fff;border-bottom:1px solid #dde2e4">    
+  <div class="pbar" id="tbar-range">
+    <span class="pbl">PERÍODO:</span>
     <button class="pb-btn" id="pb-todo"  onclick="setTPill('todo')" >Todo</button>
     <button class="pb-btn" id="pb-2024"  onclick="setTPill('2024')" >2024</button>
     <button class="pb-btn" id="pb-2025"  onclick="setTPill('2025')" >2025</button>
@@ -66,7 +66,7 @@
     <span style="font-size:11px;color:#6b7c82">→</span>
     <input type="date" class="tdate" id="t-to" onchange="setCustomRange()"/>
     <span id="reg-count" class="reg-count"></span>
-</div>
+  </div>
 
   <!-- LAYOUT -->
   <div class="body">
@@ -101,6 +101,9 @@
 
       <div class="ndiv"></div>
       <span class="nsec">Herramientas</span>
+      <button class="nb" onclick="goTab('organigrama')" id="nb-organigrama">
+        <span class="nb-icon">🏢</span>Por Organigrama
+      </button>
       <button class="nb" onclick="goTab('plansemanal')" id="nb-plansemanal">
         <span class="nb-icon">📅</span>Plan Semanal
       </button>
@@ -123,6 +126,7 @@
       <div id="tab-bvm"         style="display:none"></div>
       <div id="tab-ure"         style="display:none"></div>
       <div id="tab-sinclasif"   style="display:none"></div>
+      <div id="tab-organigrama" style="display:none"></div>
       <div id="tab-plansemanal" style="display:none"></div>
       <div id="tab-informe"     style="display:none"></div>
       <div id="tab-verificar"   style="display:none"></div>
@@ -147,6 +151,7 @@
 <script src="js/core.js"></script>
 <script src="js/views-individual.js"></script>
 <script src="js/views-grupo.js"></script>
+<script src="js/views-organigrama.js"></script>
 <script src="js/views-nivel.js"></script>
 <script src="js/informe.js"></script>
 <script src="js/tendencia.js"></script>

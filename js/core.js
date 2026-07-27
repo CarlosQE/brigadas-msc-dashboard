@@ -2,13 +2,11 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // TIME FILTER
 // ═══════════════════════════════════════════════════════════════════════════
-function setTPill(mode){
-  document.querySelectorAll('.pb-btn').forEach(b=>b.classList.remove('active'));
-  const map={todo:'pb-todo','2024':'pb-2024','2025':'pb-2025','2026':'pb-2026',mes:'pb-mes',trim:'pb-trim',sem:'pb-sem'};
-  if(map[mode]) el(map[mode])?.classList.add('active');
+function setTPill(btn,mode){
+  document.querySelectorAll('.tpill').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
   el('t-from').value=''; el('t-to').value='';
-  TIME_FILTER=buildTF(mode==='todo'?'all':mode==='mes'?'last30':mode==='trim'?'last90':mode==='sem'?'last180':'y'+mode);
-  updateTBarRange(); renderCurrentTab();
+  TIME_FILTER=buildTF(mode); updateTBarRange(); renderCurrentTab();
 }
 function setCustomRange(){
   const f=el('t-from').value,t=el('t-to').value; if(!f&&!t) return;
@@ -33,10 +31,9 @@ function applyTF(data){
 }
 function fd(){return applyTF(RAW);}
 function updateTBarRange(){
+  const r=el('tbar-range');
   const cnt=fd().length;
-  const txt=TIME_FILTER.from||TIME_FILTER.to?`${cnt} registros en el período`:`${RAW.length} registros totales`;
-  const rc=el('reg-count');
-  if(rc) rc.textContent=txt;
+  r.textContent=TIME_FILTER.from||TIME_FILTER.to?`${cnt} registros en el período`:`${RAW.length} registros totales`;
 }
 function periodLabel(){
   const f=TIME_FILTER;
@@ -116,6 +113,7 @@ function goTab(t){
   else if(t==='ure') renderNivel('URE-M');
   else if(t==='grupomods') renderGrupoModulosShell();
   else if(t==='sinclasif') renderSinClasif();
+  else if(t==='organigrama') renderOrgShell();
   else if(t==='plansemanal') renderPlanSemanal();
   else if(t==='informe') renderInforme();
   else if(t==='verificar') renderVerificar();
