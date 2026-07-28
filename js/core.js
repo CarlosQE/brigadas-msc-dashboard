@@ -18,12 +18,12 @@ function setCustomRange(){
 }
 function buildTF(mode){
   const now=new Date(),D=86400000;
-  function d0(y,m,day){return new Date(y,m-1,day,0,0,0,0);}  // local midnight
+  function d0(y,m,day){return new Date(y,m-1,day,0,0,0,0);}
   function d23(y,m,day){return new Date(y,m-1,day,23,59,59,999);}
   if(mode==='all')    return{mode,from:null,to:null};
-  if(mode==='y2024')  return{mode,from:d0(2024,1,1), to:d23(2024,12,31)};
-  if(mode==='y2025')  return{mode,from:d0(2025,1,1), to:d23(2025,12,31)};
-  if(mode==='y2026')  return{mode,from:d0(2026,1,1), to:d23(2026,12,31)};
+  if(mode==='y2024')  return{mode,from:d0(2024,1,1),to:d23(2024,12,31)};
+  if(mode==='y2025')  return{mode,from:d0(2025,1,1),to:d23(2025,12,31)};
+  if(mode==='y2026')  return{mode,from:d0(2026,1,1),to:d23(2026,12,31)};
   if(mode==='last30') return{mode,from:new Date(now-30*D),to:now};
   if(mode==='last90') return{mode,from:new Date(now-90*D),to:now};
   if(mode==='last180')return{mode,from:new Date(now-180*D),to:now};
@@ -83,6 +83,23 @@ function cumpl(lecsDone, tipo) {
   return{pct:Math.round(hrs_done/hrs_req*100),hrs_req,hrs_done};
 }
 
+// Meses dentro del período activo (TIME_FILTER)
+function mesesEnPeriodo(){
+  const now = new Date();
+  const from = TIME_FILTER.from || new Date(now.getFullYear(),0,1);
+  const to   = TIME_FILTER.to   || now;
+  const meses = (to.getFullYear()-from.getFullYear())*12
+              + (to.getMonth()-from.getMonth()) + 1;
+  return Math.max(1, Math.min(meses, 12));
+}
+
+// Cumplimiento basado en meta del período (meses × 4 hrs)
+function cumplPeriodo(hrsReal){
+  const meta = mesesEnPeriodo() * 4;
+  const pct  = Math.min(Math.round(hrsReal/meta*100), 100);
+  return { pct, hrs_req: meta, hrs_done: +hrsReal.toFixed(1) };
+}
+
 function cumplMod(modulo, lecsDone, tipo) {
   const col=TIPO_COL[tipo]||'hrs_BVM';
   const lm=PROGRAMA.filter(l=>l.modulo===modulo);
@@ -117,9 +134,12 @@ function goTab(t){
   else if(t==='bvm') renderNivel('BV-M');
   else if(t==='ure') renderNivel('URE-M');
   else if(t==='grupomods') renderGrupoModulosShell();
+  else if(t==='le') renderNivel('LE');
   else if(t==='sinclasif') renderSinClasif();
+  else if(t==='resumen') renderResumenShell();
   else if(t==='organigrama') renderOrgShell();
   else if(t==='plansemanal') renderPlanSemanal();
+  else if(t==='informe') renderInforme();
   else if(t==='indicadores') renderIndicadoresShell();
   else if(t==='verificar') renderVerificar();
 }

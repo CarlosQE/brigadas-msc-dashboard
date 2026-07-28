@@ -70,7 +70,7 @@ function renderIndicadoresShell() {
 function buildOrgMapInd() {
   const map = {};
   for (const p of Object.values(PERSONAL)) {
-    if (p.tipo_bv !== 'BV-B' && p.tipo_bv !== 'BV-M') continue;
+    if (!['BV-B','BV-M','LE'].includes(p.tipo_bv)) continue;
     if (p.estado !== 'Activo') continue;
     const vp  = (p.vp  || '(Sin VP)').trim();
     const ger = (p.gerencia || '(Sin Gerencia)').trim();
@@ -166,7 +166,7 @@ function renderIndicadores() {
   const cis = Object.keys(PERSONAL).filter(ci => {
     const p = PERSONAL[ci];
     if (p.estado !== 'Activo') return false;
-    if (p.tipo_bv !== 'BV-B' && p.tipo_bv !== 'BV-M') return false;
+    if (!['BV-B','BV-M','LE'].includes(p.tipo_bv)) return false;
     if (vp  && p.vp              !== vp)  return false;
     if (ger && p.gerencia         !== ger) return false;
     if (sup && p.superintendencia !== sup) return false;
@@ -212,6 +212,7 @@ function renderIndicadores() {
   const bajo4mes    = profiles.filter(p=>!p.cumplMes).length;
   const bvbCount    = profiles.filter(p=>p.tipo_bv==='BV-B').length;
   const bvmCount    = profiles.filter(p=>p.tipo_bv==='BV-M').length;
+  const leCount     = profiles.filter(p=>p.tipo_bv==='LE').length;
   const breadcrumb  = [vp,ger,sup,sv].filter(Boolean).join(' › ') || 'Todos';
   const mesLabel    = now.toLocaleDateString('es-BO',{month:'long',year:'numeric'});
 
